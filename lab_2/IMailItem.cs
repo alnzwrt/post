@@ -11,7 +11,7 @@ namespace Repeat
         public string Name { get; }
         public int Id { get; }
         public  string SenderName { get; }
-        public string ReceiverName { get; }
+        public string? ReceiverName { get; }
 
         public void PrintDetails();
     }

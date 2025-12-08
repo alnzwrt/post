@@ -47,9 +47,10 @@ namespace Repeat
                 .ToTable(t => t.HasCheckConstraint("CK_Weight_Positive", "Weight > 0"));
 
             // 3. Ключі
-            // Alternate Key
+            // Alternate Key (реалізовано через унікальний індекс для спадкоємця)
             modelBuilder.Entity<Parcel>()
-                .HasAlternateKey(p => p.TrackingNumber);
+                .HasIndex(p => p.TrackingNumber)
+                .IsUnique();
 
             // Composite Key
             modelBuilder.Entity<MailLog>()
