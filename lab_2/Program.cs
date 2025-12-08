@@ -1,48 +1,46 @@
-﻿using Repeat;
-using System;
-using System.Text;
+﻿using System;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace Repeat
 {
-    class Repeat
+    class Program
     {
         static void Main(string[] args)
         {
-            Console.OutputEncoding = Encoding.UTF8;
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-            Letter letter = new Letter()
+            using (var context = new AppDbContext())
             {
-                Id = 258,
-                SenderName = "Петро Г.",
-                ReceiverName = "Роман Ш."
-            };
-            letter.PrintDetails();
+                // Створить файл postoffice.db, якщо його немає
+                bool created = context.Database.EnsureCreated();
+                if (created) Console.WriteLine("Базу даних SQLite успішно створено!");
+                else Console.WriteLine("База даних вже існує.");
+            }
 
-            Parcel parcel = new Parcel()
+            // Демонстрація роботи
+            using (var context = new AppDbContext())
             {
-                Id = 678,
-                SenderName = "Федір Я.",
-                ReceiverName = "Ян Л."
-            };
-            parcel.PrintDetails();
-            ITrackable admin = (ITrackable)parcel;
-            Console.WriteLine($"Трекінг номер посилки: {admin.GetTrackingNumber()}");
+                // Додавання
+                var newLetter = new Letter
+                {
+                    SenderName = "Андрій",
+                    ReceiverName = "Олена"
+                };
+                context.Letters.Add(newLetter);
+                context.SaveChanges();
+                Console.WriteLine($"\nДодано лист, ID: {newLetter.Id}");
 
-            Console.WriteLine("---------");
-            PostOffice postOffice = new PostOffice();
-            NotificationService notifier = new NotificationService();
-            postOffice.MailProcessed += notifier.Send;
-            Parcel parcel_1 = new Parcel()
-            {
-                Id = 203,
-                SenderName = "Ілля",
-                ReceiverName = "Захар"
-            };
-            postOffice.ProcessMail(parcel_1);
-
-            var mailContainer = new MailContainer<Parcel>();
-            mailContainer.Add(parcel_1);
-            mailContainer.ProcessAll();
+                // Вибірка
+                var parcels = context.Parcels.Include(p => p.Branch).ToList();
+                Console.WriteLine($"\nЗнайдено посилок: {parcels.Count}");
+                foreach (var p in parcels)
+                {
+                    Console.Write($"- {p.TrackingNumber} ");
+                    if (p.Branch != null) Console.Write($"(Відділення: {p.Branch.Address})");
+                    Console.WriteLine();
+                }
+            }
         }
     }
 }

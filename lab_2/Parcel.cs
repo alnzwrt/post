@@ -6,24 +6,16 @@ using System.Threading.Tasks;
 
 namespace Repeat
 {
-    public class Parcel : IMailItem, ITrackable
+    public class Parcel : BaseMailItem, ITrackable
     {
-        //Неявна
-        public string Name { get; set; } = "Посилка";
-        public int Id { get; set; }
-        public string SenderName { get; set; }
-        public string ReceiverName { get; set; }
-        public string TrackingNumber { get; } = Guid.NewGuid().ToString().Substring(0, 8);
+        public Parcel() { Name = "Посилка"; }
+        public string TrackingNumber { get; set; } = Guid.NewGuid().ToString().Substring(0, 8);
 
-        public void PrintDetails()
-        {
-            Console.WriteLine($"Посилка: {Id}, Відправник: {SenderName}, Отримувач: {ReceiverName}");
-        }
+        public ParcelMetadata? Metadata { get; set; }
 
-        //Явна
-        string ITrackable.GetTrackingNumber()
-        {
-            return TrackingNumber;
-        }
+        public override void PrintDetails() =>
+            Console.WriteLine($"Посилка: {Id}, Трек: {TrackingNumber}");
+
+        string ITrackable.GetTrackingNumber() => TrackingNumber;
     }
 }
