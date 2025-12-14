@@ -6,7 +6,6 @@ namespace Repeat
 {
     public class AppDbContext : DbContext
     {
-        // Набори даних (Таблиці)
         public DbSet<BaseMailItem> MailItems { get; set; }
         public DbSet<Letter> Letters { get; set; }
         public DbSet<Parcel> Parcels { get; set; }
@@ -22,17 +21,14 @@ namespace Repeat
                 .AddJsonFile("appsettings.json");
             var config = builder.Build();
 
-            // ЗМІНА: Використовуємо SQLite
             optionsBuilder.UseSqlite(config.GetConnectionString("DefaultConnection"));
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // 1. Наслідування (TPH - Table Per Hierarchy)
             modelBuilder.Entity<BaseMailItem>()
                 .UseTphMappingStrategy();
 
-            // 2. Fluent API: Обмеження
             modelBuilder.Entity<BaseMailItem>()
                 .Property(m => m.SenderName)
                 .IsRequired()
@@ -42,35 +38,27 @@ namespace Repeat
                 .Property(m => m.ReceiverName)
                 .HasDefaultValue("Невідомий");
 
-            // Check Constraint (SQL обмеження) - SQLite це підтримує
             modelBuilder.Entity<ParcelMetadata>()
                 .ToTable(t => t.HasCheckConstraint("CK_Weight_Positive", "Weight > 0"));
 
-            // 3. Ключі
-            // Alternate Key (реалізовано через унікальний індекс для спадкоємця)
             modelBuilder.Entity<Parcel>()
                 .HasIndex(p => p.TrackingNumber)
                 .IsUnique();
 
-            // Composite Key
             modelBuilder.Entity<MailLog>()
                 .HasKey(l => new { l.MailItemId, l.LogDate });
 
-            // 4. Зв'язки
-            // Один-до-Багатьох
             modelBuilder.Entity<PostOfficeBranch>()
                 .HasMany(b => b.MailItems)
                 .WithOne(m => m.Branch)
                 .HasForeignKey(m => m.BranchId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Один-до-Одного
             modelBuilder.Entity<Parcel>()
                 .HasOne(p => p.Metadata)
                 .WithOne(m => m.Parcel)
                 .HasForeignKey<ParcelMetadata>(m => m.ParcelId);
 
-            // 5. Seeding (Початкові дані)
             modelBuilder.Entity<PostOfficeBranch>().HasData(
                 new PostOfficeBranch { Id = 1, Address = "Київ, вул. Хрещатик, 1" }
             );

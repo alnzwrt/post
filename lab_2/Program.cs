@@ -12,16 +12,13 @@ namespace Repeat
 
             using (var context = new AppDbContext())
             {
-                // Створить файл postoffice.db, якщо його немає
                 bool created = context.Database.EnsureCreated();
                 if (created) Console.WriteLine("Базу даних SQLite успішно створено!");
                 else Console.WriteLine("База даних вже існує.");
             }
 
-            // Демонстрація роботи
             using (var context = new AppDbContext())
             {
-                // Додавання
                 var newLetter = new Letter
                 {
                     SenderName = "Андрій",
@@ -31,7 +28,6 @@ namespace Repeat
                 context.SaveChanges();
                 Console.WriteLine($"\nДодано лист, ID: {newLetter.Id}");
 
-                // Вибірка
                 var parcels = context.Parcels.Include(p => p.Branch).ToList();
                 Console.WriteLine($"\nЗнайдено посилок: {parcels.Count}");
                 foreach (var p in parcels)
