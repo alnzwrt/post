@@ -17,5 +17,6 @@ namespace Repeat
             Console.WriteLine($"Посилка: {Id}, Трек: {TrackingNumber}");
 
         string ITrackable.GetTrackingNumber() => TrackingNumber;
+
     }
 }
