@@ -21,9 +21,9 @@ namespace Repeat
         public string? ReceiverName { get; set; }
 
         public int? BranchId { get; set; }
-        public PostOfficeBranch? Branch { get; set; }
+        public virtual PostOfficeBranch? Branch { get; set; }
 
-        public List<Tag> Tags { get; set; } = new List<Tag>();
+        public virtual List<Tag> Tags { get; set; } = new List<Tag>();
 
         public abstract void PrintDetails();
     }

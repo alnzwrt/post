@@ -66,7 +66,7 @@ namespace Repeat
 
             foreach (var g in groupedBySender)
             {
-                Console.WriteLine($"Group By: {g.Sender} відправив {g.Count} посилок.");
+                Console.WriteLine($"Group By: {g.Sender} відправ(ив/ла) {g.Count} посилок.");
             }
 
             if (context.ParcelMetadatas.Any())
@@ -105,12 +105,17 @@ namespace Repeat
                 Console.WriteLine($"Explicit: Лист {letter.Name} дозавантажив відділення: {letter.Branch?.Address}");
             }
 
-            var lazyItem = context.MailItems.FirstOrDefault();
+            Console.WriteLine("\nLazy Loading: ");
+
+            context.ChangeTracker.Clear();
+            
+
+            var lazyItem = context.MailItems.FirstOrDefault(m => m.BranchId != null);
+
             if (lazyItem != null)
             {
-                Console.WriteLine($"Lazy: {lazyItem.Branch?.Address}"); 
+                Console.WriteLine($"Lazy: {lazyItem.Name}, Відділення: {lazyItem.Branch?.Address}");
             }
-            Console.WriteLine("Lazy Loading: Потребує пакету Proxies та virtual властивостей.");
         }
         
         //Ті що не відслідковуются 
@@ -118,13 +123,15 @@ namespace Repeat
         {
             Console.WriteLine("\nДані що не відслідковуються: ");
 
+            context.ChangeTracker.Clear();
+
             var item = context.MailItems.AsNoTracking().FirstOrDefault();
 
             if (item != null)
             {
                 Console.WriteLine($"Original Name: {item.Name}");
 
-                item.Name = "Змінена назва (NoTracking)";
+                item.Name = "Не відсліковуєтся";
 
                 context.SaveChanges();
 

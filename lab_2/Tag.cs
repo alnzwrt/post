@@ -11,6 +11,6 @@ namespace Repeat
     {
         public int Id { get; set; }
         public string Label { get; set; }
-        public List<BaseMailItem> MailItems { get; set; } = new List<BaseMailItem>();
+        public virtual List<BaseMailItem> MailItems { get; set; } = new List<BaseMailItem>();
     }
 }

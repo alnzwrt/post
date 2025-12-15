@@ -11,7 +11,7 @@ namespace Repeat
         public Parcel() { Name = "Посилка"; }
         public string TrackingNumber { get; set; } = Guid.NewGuid().ToString().Substring(0, 8);
 
-        public ParcelMetadata? Metadata { get; set; }
+        public virtual ParcelMetadata? Metadata { get; set; }
 
         public override void PrintDetails() =>
             Console.WriteLine($"Посилка: {Id}, Трек: {TrackingNumber}");

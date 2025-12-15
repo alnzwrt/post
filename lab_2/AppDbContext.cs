@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore.Proxies;
 using System.IO;
 
 namespace Repeat
@@ -19,7 +20,8 @@ namespace Repeat
             var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
             var config = builder.Build();
 
-            optionsBuilder.UseSqlite(config.GetConnectionString("DefaultConnection"));
+            optionsBuilder.UseLazyLoadingProxies().UseSqlite(config.GetConnectionString("DefaultConnection"));
+
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

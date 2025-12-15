@@ -14,6 +14,6 @@ namespace Repeat
         public int Id { get; set; }
         public double Weight { get; set; }
         public int ParcelId { get; set; }
-        public Parcel Parcel { get; set; }
+        public virtual Parcel Parcel { get; set; }
     }
 }
