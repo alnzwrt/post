@@ -16,9 +16,7 @@ namespace Repeat
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json");
+            var builder = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json");
             var config = builder.Build();
 
             optionsBuilder.UseSqlite(config.GetConnectionString("DefaultConnection"));
@@ -26,38 +24,21 @@ namespace Repeat
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<BaseMailItem>()
-                .UseTphMappingStrategy();
+            modelBuilder.Entity<BaseMailItem>().UseTphMappingStrategy();
 
-            modelBuilder.Entity<BaseMailItem>()
-                .Property(m => m.SenderName)
-                .IsRequired()
-                .HasMaxLength(50);
+            modelBuilder.Entity<BaseMailItem>().Property(m => m.SenderName).IsRequired().HasMaxLength(50);
 
-            modelBuilder.Entity<BaseMailItem>()
-                .Property(m => m.ReceiverName)
-                .HasDefaultValue("Невідомий");
+            modelBuilder.Entity<BaseMailItem>().Property(m => m.ReceiverName).HasDefaultValue("Невідомий");
 
-            modelBuilder.Entity<ParcelMetadata>()
-                .ToTable(t => t.HasCheckConstraint("CK_Weight_Positive", "Weight > 0"));
+            modelBuilder.Entity<ParcelMetadata>().ToTable(t => t.HasCheckConstraint("CK_Weight_Positive", "Weight > 0"));
 
-            modelBuilder.Entity<Parcel>()
-                .HasIndex(p => p.TrackingNumber)
-                .IsUnique();
+            modelBuilder.Entity<Parcel>().HasIndex(p => p.TrackingNumber).IsUnique();
 
-            modelBuilder.Entity<MailLog>()
-                .HasKey(l => new { l.MailItemId, l.LogDate });
+            modelBuilder.Entity<MailLog>().HasKey(l => new { l.MailItemId, l.LogDate });
 
-            modelBuilder.Entity<PostOfficeBranch>()
-                .HasMany(b => b.MailItems)
-                .WithOne(m => m.Branch)
-                .HasForeignKey(m => m.BranchId)
-                .OnDelete(DeleteBehavior.SetNull);
+            modelBuilder.Entity<PostOfficeBranch>().HasMany(b => b.MailItems).WithOne(m => m.Branch).HasForeignKey(m => m.BranchId).OnDelete(DeleteBehavior.SetNull);
 
-            modelBuilder.Entity<Parcel>()
-                .HasOne(p => p.Metadata)
-                .WithOne(m => m.Parcel)
-                .HasForeignKey<ParcelMetadata>(m => m.ParcelId);
+            modelBuilder.Entity<Parcel>().HasOne(p => p.Metadata).WithOne(m => m.Parcel).HasForeignKey<ParcelMetadata>(m => m.ParcelId);
 
             modelBuilder.Entity<PostOfficeBranch>().HasData(
                 new PostOfficeBranch { Id = 1, Address = "Київ, вул. Хрещатик, 1" }
