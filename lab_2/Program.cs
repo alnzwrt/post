@@ -9,9 +9,11 @@ namespace Repeat
 {
     class Program
     {
-        private static readonly object _threadLocker = new object();
+        private static readonly object _monitorLock = new object();
 
-        private static readonly object _taskLocker = new object();
+        private static readonly Mutex _mutex = new Mutex(false, "MyUniqueMutexName");
+
+        private static readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
         private static int _globalCounter = 0;
 
@@ -23,29 +25,29 @@ namespace Repeat
             {
                 context.Database.EnsureDeleted();
                 context.Database.EnsureCreated();
-                Console.WriteLine("Базу даних перестворено для тесту.\n");
+                Console.WriteLine("Базу даних підготовлено.\n");
             }
 
-            Console.WriteLine("Класичні потоки (Thread)");
+            Console.WriteLine("Класичні потоки (Monitor + Mutex) ===");
             RunClassicThreads();
 
             _globalCounter = 0;
             Console.WriteLine("\n----------------------------------------\n");
 
-            Console.WriteLine("TPL та Async (Task)");
+            Console.WriteLine("TPL та Async (SemaphoreSlim) ===");
             await RunTplAsync();
 
+            _mutex.Dispose();
+            _semaphoreSlim.Dispose();
             Console.WriteLine("\nРоботу завершено.");
         }
 
-        #region Classic Threads (Class Thread)
+        #region Classic Threads (Monitor & Mutex)
 
         static void RunClassicThreads()
         {
             List<Thread> threads = new List<Thread>();
             int numberOfThreads = 5;
-
-            Console.WriteLine("[Thread] Початок генерації даних...");
 
             for (int i = 0; i < numberOfThreads; i++)
             {
@@ -56,28 +58,24 @@ namespace Repeat
 
             foreach (var t in threads) t.Join();
 
-            Console.WriteLine("[Thread] Генерацію завершено. Початок читання...");
-
-            threads.Clear();
-            for (int i = 0; i < 2; i++)
-            {
-                Thread t = new Thread(ReadDataThreadWorker);
-                threads.Add(t);
-                t.Start();
-            }
-
-            foreach (var t in threads) t.Join();
+            ReadData();
         }
 
         static void WriteDataThreadWorker()
         {
-            string uniqueName;
+            string uniqueName = "";
+            bool monitorLockTaken = false;
 
-            lock (_threadLocker)
+            try
             {
+                Monitor.Enter(_monitorLock, ref monitorLockTaken);
+
                 _globalCounter++;
                 uniqueName = $"Letter_Thread_{_globalCounter}";
-                Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} згенерував: {uniqueName}");
+            }
+            finally
+            {
+                if (monitorLockTaken) Monitor.Exit(_monitorLock);
             }
 
             using (var context = new AppDbContext())
@@ -86,65 +84,61 @@ namespace Repeat
                 {
                     Name = uniqueName,
                     SenderName = $"Sender_{Thread.CurrentThread.ManagedThreadId}",
-                    ReceiverName = "Receiver_Thread",
                     BranchId = 1
                 };
 
-                context.Letters.Add(letter);
-                context.SaveChanges(); 
-            }
-        }
-
-        static void ReadDataThreadWorker()
-        {
-            using (var context = new AppDbContext())
-            {
-                // Читаємо дані (синхронно)
-                var items = context.Letters.AsNoTracking().ToList();
-                Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} прочитав {items.Count} записів.");
+                _mutex.WaitOne();
+                try
+                {
+                    Console.WriteLine($"[Thread {Thread.CurrentThread.ManagedThreadId}] Mutex захоплено. Зберігаю {uniqueName}...");
+                    context.Letters.Add(letter);
+                    context.SaveChanges();
+                    Console.WriteLine($"[Thread {Thread.CurrentThread.ManagedThreadId}] Збережено.");
+                }
+                finally
+                {
+                    _mutex.ReleaseMutex();
+                }
             }
         }
 
         #endregion
 
-        #region TPL (Task + Async)
+        #region TPL (SemaphoreSlim)
 
         static async Task RunTplAsync()
         {
             List<Task> tasks = new List<Task>();
             int numberOfTasks = 5;
 
-            Console.WriteLine("[Task] Початок асинхронної генерації даних...");
-
             for (int i = 0; i < numberOfTasks; i++)
             {
-                tasks.Add(Task.Run(() => WriteDataTaskWorkerAsync()));
+                tasks.Add(WriteDataTaskWorkerAsync());
             }
 
             await Task.WhenAll(tasks);
 
-            Console.WriteLine("[Task] Генерацію завершено. Початок асинхронного читання...");
-
-            tasks.Clear();
-            for (int i = 0; i < 2; i++)
-            {
-                tasks.Add(Task.Run(() => ReadDataTaskWorkerAsync()));
-            }
-
-            await Task.WhenAll(tasks);
+            ReadData();
         }
 
         static async Task WriteDataTaskWorkerAsync()
         {
-            string uniqueName;
+            string uniqueName = "";
 
-            lock (_taskLocker)
+            await _semaphoreSlim.WaitAsync();
+            try
             {
                 _globalCounter++;
                 uniqueName = $"Letter_Task_{_globalCounter}";
+
+                await Task.Delay(10);
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
             }
 
-            Console.WriteLine($"Task {Task.CurrentId} підготував: {uniqueName}");
+            Console.WriteLine($"[Task {Task.CurrentId}] Отримав ім'я: {uniqueName}. Починаю запис...");
 
             using (var context = new AppDbContext())
             {
@@ -152,7 +146,6 @@ namespace Repeat
                 {
                     Name = uniqueName,
                     SenderName = $"Sender_Task_{Task.CurrentId}",
-                    ReceiverName = "Receiver_Task",
                     BranchId = 1
                 };
 
@@ -161,21 +154,15 @@ namespace Repeat
             }
         }
 
-        static async Task ReadDataTaskWorkerAsync()
+        #endregion
+
+        static void ReadData()
         {
             using (var context = new AppDbContext())
             {
-                var items = await context.Letters.AsNoTracking().ToListAsync();
-                Console.WriteLine($"Task {Task.CurrentId} асинхронно прочитав {items.Count} записів.");
-
-                if (items.Any())
-                {
-                    var last = items.Last();
-                    Console.WriteLine($"   -> Останній запис (Task {Task.CurrentId}): {last.Name}");
-                }
+                var count = context.Letters.Count();
+                Console.WriteLine($"-> У базі зараз {count} записів.");
             }
         }
-
-        #endregion
     }
 }
